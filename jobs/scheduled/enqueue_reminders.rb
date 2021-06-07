@@ -28,23 +28,23 @@ module Jobs
         FROM topic_custom_fields
 
         LEFT OUTER JOIN user_custom_fields AS last_reminder
-        ON topic_custom_fields.value::INT = last_reminder.user_id
+        ON CAST(topic_custom_fields.value AS SIGNED) = last_reminder.user_id
         AND last_reminder.name = '#{PendingAssignsReminder::REMINDED_AT}'
 
         LEFT OUTER JOIN user_custom_fields AS user_frequency
-        ON topic_custom_fields.value::INT = user_frequency.user_id
+        ON CAST(topic_custom_fields.value AS SIGNED) = user_frequency.user_id
         AND user_frequency.name = '#{PendingAssignsReminder::REMINDERS_FREQUENCY}'
 
-        INNER JOIN group_users ON topic_custom_fields.value::INT = group_users.user_id
+        INNER JOIN group_users ON CAST(topic_custom_fields.value AS SIGNED) = group_users.user_id
         INNER JOIN topics ON topics.id = topic_custom_fields.topic_id AND (topics.deleted_at IS NULL)
 
         WHERE group_users.group_id IN (#{allowed_group_ids})
         AND #{frequency} > 0
         AND (
           last_reminder.value IS NULL OR
-          last_reminder.value::TIMESTAMP <= CURRENT_TIMESTAMP - ('1 MINUTE'::INTERVAL * #{frequency})
+          cast(last_reminder.value as datetime) <= date_add(CURRENT_TIMESTAMP, interval (-1 * #{frequency}) minute)
         )
-        AND topic_custom_fields.updated_at::TIMESTAMP <= CURRENT_TIMESTAMP - ('1 MINUTE'::INTERVAL * #{frequency})
+        AND cast(topic_custom_fields.updated_at as datetime) <= date_add(CURRENT_TIMESTAMP, interval (-1 * #{frequency}) minute)
         AND topic_custom_fields.name = '#{TopicAssigner::ASSIGNED_TO_ID}'
 
         GROUP BY topic_custom_fields.value
