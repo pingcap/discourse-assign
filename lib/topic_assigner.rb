@@ -12,7 +12,7 @@ class ::TopicAssigner
     staff_mention = User
       .assign_allowed
       .pluck('username')
-      .map { |name| "p.cooked ILIKE '%mention%@#{name}%'" }
+      .map { |name| "p.cooked LIKE '%mention%@#{name}%'" }
       .join(' OR ')
 
     sql = <<~SQL
