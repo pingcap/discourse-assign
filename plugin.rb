@@ -109,7 +109,7 @@ after_initialize do
 
       if allowed_access && topics.length > 0
         users = User.where("users.id in (
-              SELECT value::int
+              SELECT cast(value as signed)
               FROM topic_custom_fields
               WHERE name = 'assigned_to_id' AND topic_id IN (?)
         )", topics.map(&:id))
@@ -278,7 +278,7 @@ after_initialize do
             INNER JOIN posts p ON p.id = target_id
             INNER JOIN topics t ON t.id = p.topic_id
             INNER JOIN topic_custom_fields tcf ON tcf.topic_id = t.id
-            INNER JOIN users u ON u.id = tcf.value::integer
+            INNER JOIN users u ON u.id = cast(tcf.value as signed)
           SQL
           )
           .where(target_type: Post.name)

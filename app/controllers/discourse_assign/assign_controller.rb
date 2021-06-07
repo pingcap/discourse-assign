@@ -11,10 +11,10 @@ module DiscourseAssign
         .where('users.id <> ?', current_user.id)
         .joins(<<~SQL
           JOIN(
-                SELECT value::integer user_id, MAX(created_at) last_assigned
+                SELECT cast(value as SIGNED) user_id, MAX(created_at) last_assigned
                 FROM topic_custom_fields
                 WHERE name = 'assigned_to_id'
-                GROUP BY value::integer
+                GROUP BY cast(value as signed)
                 HAVING COUNT(*) < #{SiteSetting.max_assigned_topics}
               ) as X ON X.user_id = users.id
         SQL
@@ -90,14 +90,14 @@ module DiscourseAssign
         .includes(:tags)
         .includes(:user)
         .joins("JOIN topic_custom_fields tcf ON topics.id = tcf.topic_id AND tcf.name = 'assigned_to_id' AND tcf.value IS NOT NULL")
-        .order('tcf.value::integer, topics.bumped_at desc')
+        .order('cast(tcf.value as signed), topics.bumped_at desc')
         .offset(offset)
         .limit(limit)
 
       Topic.preload_custom_fields(topics, TopicList.preloaded_custom_fields)
 
       users = User
-        .where("users.id IN (SELECT value::int FROM topic_custom_fields WHERE name = 'assigned_to_id' AND topic_id IN (?))", topics.map(&:id))
+        .where("users.id IN (SELECT cast(value as signed) FROM topic_custom_fields WHERE name = 'assigned_to_id' AND topic_id IN (?))", topics.map(&:id))
         .joins('join user_emails on user_emails.user_id = users.id AND user_emails.primary')
         .select(AvatarLookup.lookup_columns)
         .to_a
